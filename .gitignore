@@ -1,0 +1,10 @@
+/.local/
+/build/
+/dist/
+*.shell-extension.zip
+gschemas.compiled
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*

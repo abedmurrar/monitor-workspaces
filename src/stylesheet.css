@@ -1,0 +1,8 @@
+.monitor-workspaces-heading { color: white; font-weight: bold; font-size: 18px; }
+.monitor-workspaces-hint { color: #c2c5ca; font-size: 12px; }
+.monitor-workspaces-card { background-color: #252930; border: 2px solid #626873; border-radius: 14px; }
+.monitor-workspaces-card:hover { background-color: #303640; border-color: #c4c9d2; }
+.monitor-workspaces-card.active { border: 3px solid #e98442; background-color: #33302e; }
+.monitor-workspaces-title { color: white; font-size: 14px; font-weight: bold; }
+.monitor-workspaces-window { background-color: #434a55; border: 1px solid #8c939f; border-radius: 5px; }
+.monitor-workspaces-window:hover { border: 2px solid #e98442; }

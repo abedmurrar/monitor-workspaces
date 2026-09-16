@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install GLib schema compiler
+        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin
+      - name: Run unit and packaging tests
+        run: make test
+      - name: Build the extension archive
+        run: make build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monitor-workspaces-extension
+          path: dist/*.shell-extension.zip
+
+  # The integration suite needs a real GNOME Shell 42 session, which no hosted
+  # runner provides. Run `make integration` on an Ubuntu 22.04 machine instead.

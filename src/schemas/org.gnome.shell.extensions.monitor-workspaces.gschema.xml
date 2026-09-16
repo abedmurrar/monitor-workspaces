@@ -1,0 +1,6 @@
+<schemalist>
+  <schema id="org.gnome.shell.extensions.monitor-workspaces" path="/org/gnome/shell/extensions/monitor-workspaces/">
+    <key name="next" type="as"><default>['&lt;Control&gt;&lt;Alt&gt;a']</default></key>
+    <key name="previous" type="as"><default>['&lt;Control&gt;&lt;Alt&gt;q']</default></key>
+  </schema>
+</schemalist>
