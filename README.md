@@ -127,14 +127,30 @@ gnome-extensions uninstall monitor-workspaces@local
 
 Windows stay in ordinary native workspaces and remain accessible afterwards.
 
+## Acknowledgements
+
+This project exists because of
+[Switch workspaces on active monitor](https://github.com/micheledaros/gnome-shell-extension-simulate-switching-workspaces-on-active-monitor),
+first published by **Xiaoguang Wang (sunwxg)** in 2019 and later carried forward
+and published to extensions.gnome.org by **Michele Da Ros**, with contributions
+from Jakob Probst, Callum Iddon, and others. It established that per-monitor
+workspace switching was worth having on GNOME, and its Ctrl+Alt+Q/A shortcuts are
+kept here so it can be swapped in and out without relearning anything.
+
+Their history is grafted into this repository as an ancestor so that credit lives
+in `git log`, and their MIT notice is preserved in [LICENSE.upstream](LICENSE.upstream).
+No code is shared: this is an independent GNOME 42 implementation with a different
+mechanism, as described in the sections above.
+
 ## Related work
 
-[Switch workspaces on active monitor](https://github.com/micheledaros/gnome-shell-extension-simulate-switching-workspaces-on-active-monitor)
-keeps inactive monitors' contents in place after a global switch, but cannot
-avoid the shared animation. V-Shell's overview thumbnails call native workspace
-activation directly. [Workspace Islands](https://github.com/danielbernalo/gnome-workspace-islands)
+The upstream extension keeps inactive monitors' contents in place after a global
+switch, but cannot avoid the shared animation. V-Shell's overview thumbnails call
+native workspace activation directly.
+[Workspace Islands](https://github.com/danielbernalo/gnome-workspace-islands)
 integrates more deeply but requires a much newer GNOME.
 
 ## License
 
-[GPL-2.0-or-later](LICENSE), matching the GNOME Shell ecosystem.
+[GPL-2.0-or-later](LICENSE), matching the GNOME Shell ecosystem. The grafted
+upstream history remains under its own [MIT license](LICENSE.upstream).
