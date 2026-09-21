@@ -16,7 +16,7 @@ build:
 
 test:
 	@for file in src/*.js tests/*.js; do $(NODE) --check "$$file" || exit 1; done
-	$(NODE) --test tests/model.test.js tests/animation-stacking.test.js
+	$(NODE) --test tests/*.test.js
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
 
 integration:

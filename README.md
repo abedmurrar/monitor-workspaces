@@ -48,6 +48,10 @@ Wayland, log out and back in.
   the overview, and focus the window.
 - Scrolling over a monitor's cards switches that monitor.
 - Search and the app grid keep GNOME's normal interfaces.
+- Cards leave room for the search field and launcher using their actual on-screen
+  positions. Typing a search or opening the app grid hides the cards immediately.
+- Native workspace previews stay hidden during search and overview transitions;
+  only GNOME's search results or app grid are shown when the cards are hidden.
 
 Desktop switches slide left or right over 260 ms, clipped to the selected
 monitor's bounds. The panel, dock, and sticky windows stay fixed, desktop icons

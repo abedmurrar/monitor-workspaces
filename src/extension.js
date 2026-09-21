@@ -4,6 +4,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const {MonitorModel, wrap} = Me.imports.model;
 const {MonitorAnimation} = Me.imports.animation;
+const {panelBounds} = Me.imports.overviewLayout;
 
 class MonitorWorkspaces {
     enable() {
@@ -26,6 +27,19 @@ class MonitorWorkspaces {
         this._model = new MonitorModel(global.workspace_manager.n_workspaces,
             global.workspace_manager.get_active_workspace_index());
         this._controls = Main.overview._overview.controls;
+        // Keep the native workspace actors suppressed for the whole extension
+        // lifetime, including search and transitions. Their visibility is not
+        // the same thing as the visibility of our cards.
+        this._display = this._controls._workspacesDisplay;
+        this._oldUpdateViews = this._display._updateWorkspacesViews;
+        const self = this;
+        this._updateViews = function(...args) {
+            const result = self._oldUpdateViews.apply(this, args);
+            self._suppressNativeOverview();
+            return result;
+        };
+        this._display._updateWorkspacesViews = this._updateViews;
+        this._suppressNativeOverview();
 
         this._connect(Main.overview, 'showing', () => {
             this._animation.cancelAll();
@@ -39,6 +53,9 @@ class MonitorWorkspaces {
         });
         this._connect(this._controls._stateAdjustment, 'notify::value', () => this._syncMode());
         this._connect(this._controls._searchController, 'notify::search-active', () => this._syncMode());
+        this._connect(this._controls._searchEntry.clutter_text, 'text-changed', () => this._syncMode());
+        this._connect(this._controls.dash.showAppsButton, 'notify::checked', () => this._syncMode());
+        this._connect(this._controls._searchEntryBin, 'notify::allocation', () => this._queueRender());
         this._connect(global.workspace_manager, 'active-workspace-changed', () => this._nativeSwitch());
         this._connect(global.workspace_manager, 'notify::n-workspaces', () => {
             this._animation.cancelAll();
@@ -145,13 +162,18 @@ class MonitorWorkspaces {
         this._queueRender();
     }
 
+    _showCards() {
+        return this._overviewOpen && this._controls._stateAdjustment.value <= 1.05 &&
+            !this._controls._searchController.searchActive &&
+            !this._controls._searchEntry.get_text().trim() &&
+            !this._controls.dash.showAppsButton.checked;
+    }
+
     _syncMode() {
         if (!this._overviewOpen)
             return;
-        const picker = this._controls._stateAdjustment.value <= 1.05 &&
-            !this._controls._searchController.searchActive;
-        if (picker)
-            this._queueRender();
+        if (this._showCards())
+            this._layer ? this._updateCardOpacity() : this._queueRender();
         else
             this._clearOverview();
     }
@@ -159,16 +181,16 @@ class MonitorWorkspaces {
     _queueRender() {
         if (!this._overviewOpen || this._idle)
             return;
-        this._idle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        this._idle = Meta.later_add(Meta.LaterType.BEFORE_REDRAW, () => {
             this._idle = 0;
-            if (this._overviewOpen && this._controls._stateAdjustment.value <= 1.05 &&
-                !this._controls._searchController.searchActive)
+            if (this._showCards())
                 this._render();
             return GLib.SOURCE_REMOVE;
         });
     }
 
     _suppress(actor) {
+        this._suppressed = this._suppressed.filter(entry => entry.actor);
         if (!actor || this._suppressed.some(entry => entry.actor === actor))
             return;
         const record = {actor, opacity: actor.opacity, signal: 0, destroy: 0};
@@ -188,6 +210,9 @@ class MonitorWorkspaces {
             this._layer.destroy();
             this._layer = null;
         }
+    }
+
+    _restoreNativeOverview() {
         for (const record of this._suppressed) {
             if (!record.actor)
                 continue;
@@ -198,28 +223,50 @@ class MonitorWorkspaces {
         this._suppressed = [];
     }
 
+    _suppressNativeOverview() {
+        this._suppress(this._display);
+        this._suppress(this._controls._thumbnailsBox);
+        for (const view of this._display._workspacesViews)
+            this._suppress(view);
+    }
+
+    _updateCardOpacity() {
+        if (this._layer)
+            this._layer.opacity = Math.round(255 * Math.min(1, this._controls._stateAdjustment.value));
+    }
+
     _render() {
         if (this._layer)
             this._layer.destroy();
-        const display = this._controls._workspacesDisplay;
-        this._suppress(display);
-        this._suppress(this._controls._thumbnailsBox);
-        for (const view of display._workspacesViews)
-            this._suppress(view);
-        this._layer = new St.Widget({name: 'monitor-workspaces-overview'});
+        this._suppressNativeOverview();
+        this._layer = new St.Widget({name: 'monitor-workspaces-overview',
+            x: 0, y: 0, width: global.stage.width, height: global.stage.height,
+            reactive: false});
         Main.layoutManager.overviewGroup.add_child(this._layer);
         const windows = this._windows();
         for (const monitor of Main.layoutManager.monitors)
             this._renderMonitor(monitor, windows);
+        this._updateCardOpacity();
     }
 
     _renderMonitor(monitor, windows) {
         const area = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
-        const primary = monitor.index === Main.layoutManager.primaryIndex;
-        const margin = Math.max(24, Math.round(area.width * 0.035));
-        const top = primary ? 100 : 48;
-        const panel = new St.Widget({reactive: true, x: area.x + margin, y: area.y + top,
-            width: area.width - margin * 2, height: Math.max(200, area.height - top - 100)});
+        const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        const controls = [];
+        for (const [actor, kind] of [[this._controls._searchEntryBin, 'search'],
+            [this._controls.dash, 'dash']]) {
+            if (!actor.mapped || !actor.visible || actor.opacity === 0)
+                continue;
+            const [x, y] = actor.get_transformed_position();
+            const [width, height] = actor.get_transformed_size();
+            controls.push({x, y, width, height, kind});
+        }
+        const bounds = panelBounds(area, scale, controls);
+        if (!bounds)
+            return;
+        const [, localX, localY] = this._layer.transform_stage_point(bounds.x, bounds.y);
+        const panel = new St.Widget({reactive: true, x: localX, y: localY,
+            width: bounds.width, height: bounds.height, clip_to_allocation: true});
         this._layer.add_child(panel);
         panel.add_child(new St.Label({text: `Monitor ${monitor.index + 1}  ·  Workspace ${this._model.current(monitor.index) + 1}`,
             style_class: 'monitor-workspaces-heading'}));
@@ -302,9 +349,12 @@ class MonitorWorkspaces {
         this._animation.cancelAll();
         this._overviewOpen = false;
         if (this._idle)
-            GLib.source_remove(this._idle);
+            Meta.later_remove(this._idle);
         this._idle = 0;
         this._clearOverview();
+        if (this._display._updateWorkspacesViews === this._updateViews)
+            this._display._updateWorkspacesViews = this._oldUpdateViews;
+        this._restoreNativeOverview();
         for (const [object, id] of this._signals)
             object.disconnect(id);
         this._signals = [];

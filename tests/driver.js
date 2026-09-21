@@ -29,8 +29,23 @@ async function test() {
     let globalSwitches = 0;
     const signal = global.window_manager.connect('switch-workspace', () => globalSwitches++);
     Main.overview.show();
+    assert(ext._controls._workspacesDisplay.opacity === 0 &&
+        ext._controls._thumbnailsBox.opacity === 0 &&
+        ext._controls._workspacesDisplay._workspacesViews.every(view => view.opacity === 0),
+    'Native previews are suppressed synchronously before the first overview frame');
+    await delay(80);
+    assert(!!ext._layer, 'Cards render during the opening animation, not after it');
     await delay(1000);
     assert(!!ext._layer && ext._layer.get_n_children() === 2, 'Overview shows independent panels on both monitors');
+    const searchEntry = ext._controls._searchEntry;
+    const [searchX, searchY] = searchEntry.get_transformed_position();
+    const [searchWidth, searchHeight] = searchEntry.get_transformed_size();
+    const picked = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE,
+        searchX + searchWidth / 2, searchY + searchHeight / 2);
+    assert(picked === searchEntry || searchEntry.contains(picked), 'Search field receives clicks above the cards');
+    const primaryPanel = ext._layer.get_child_at_index(Main.layoutManager.primaryIndex);
+    const [, panelY] = primaryPanel.get_transformed_position();
+    assert(panelY >= searchY + searchHeight, 'Cards do not overlap the search field');
     const panel = ext._layer.get_child_at_index(0);
     const secondCard = panel.get_child_at_index(3);
     secondCard.get_child_at_index(0).emit('clicked', 1);
@@ -49,15 +64,31 @@ async function test() {
     stream.close(null);
     log('[monitor-test] screenshot saved');
     await delay(500);
-    ext._controls._searchEntry.set_text('Terminal');
+    const searchKeyboard = Clutter.get_default_backend().get_default_seat()
+        .create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+    for (const key of [Clutter.KEY_t, Clutter.KEY_e, Clutter.KEY_r, Clutter.KEY_m]) {
+        searchKeyboard.notify_keyval(GLib.get_monotonic_time(), key, Clutter.KeyState.PRESSED);
+        searchKeyboard.notify_keyval(GLib.get_monotonic_time(), key, Clutter.KeyState.RELEASED);
+        await delay(50);
+    }
     await delay(500);
+    assert(ext._controls._searchEntry.get_text() === 'term', 'Typing in overview starts native app search');
     assert(ext._layer === null, 'Search releases the custom workspace overlay');
+    assert(ext._controls._workspacesDisplay.opacity === 0 &&
+        ext._controls._thumbnailsBox.opacity === 0 &&
+        ext._controls._workspacesDisplay._workspacesViews.every(view => view.opacity === 0),
+    'Search never restores workspace previews over its results');
+    const searchStream = Gio.File.new_for_path(GLib.build_filenamev([
+        GLib.getenv('MONITOR_WORKSPACES_OUTPUT'), 'search.png']))
+        .replace(null, false, Gio.FileCreateFlags.NONE, null);
+    await new Shell.Screenshot().screenshot(false, searchStream);
+    searchStream.close(null);
     ext._controls._searchEntry.set_text('');
     await delay(500);
     assert(!!ext._layer, 'Workspace cards return after clearing search');
     Main.overview.hide();
     await delay(400);
-    assert(ext._layer === null && ext._suppressed.length === 0, 'Closing overview cleans up actors');
+    assert(ext._layer === null, 'Closing overview cleans up card actors');
     const seat = Clutter.get_default_backend().get_default_seat();
     const pointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
     const keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
@@ -82,6 +113,8 @@ async function test() {
     ext._controls.dash.showAppsButton.checked = true;
     await delay(700);
     assert(ext._layer === null, 'App grid releases the workspace overlay');
+    assert(ext._controls._workspacesDisplay.opacity === 0 && ext._controls._thumbnailsBox.opacity === 0,
+        'App grid keeps native previews suppressed');
     ext._controls.dash.showAppsButton.checked = false;
     await delay(700);
     assert(!!ext._layer, 'Cards return from the app grid');
@@ -92,6 +125,7 @@ async function test() {
     assert(leftA.get_workspace().index() === origin && ext._model.current(1) === 1, 'Window preview activation preserves the other monitor');
     global.window_manager.disconnect(signal);
     ext.disable();
+    assert(ext._suppressed.length === 0, 'Disabling restores native actor ownership');
     assert(Main.wm.actionMoveWorkspace !== ext._action, 'Disable restores native workspace switching');
     ext.enable();
     Main.overview.show();

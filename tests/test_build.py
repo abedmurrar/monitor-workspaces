@@ -21,7 +21,8 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(set(archive.namelist()), set(builder.RUNTIME_FILES) | {
                     "schemas/gschemas.compiled", "LICENSE",
                 })
-                self.assertEqual(json.loads(archive.read("metadata.json"))["version"], 3)
+                self.assertEqual(json.loads(archive.read("metadata.json"))["version"],
+                                 json.loads((ROOT / "src" / "metadata.json").read_text())["version"])
                 self.assertGreater(len(archive.read("schemas/gschemas.compiled")), 0)
                 self.assertIsNone(archive.testzip())
 
