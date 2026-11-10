@@ -30,9 +30,13 @@ GNOME 42 session.
 - Keep the workspace mapping logic in `src/model.js` and the layout maths in
   `src/overviewLayout.js` and `src/windowLayout.js` free of GNOME imports so they
   stay testable under plain Node.
-- Add a regression assertion for behaviour you fix. `tests/model.test.js` and
+- Add a regression assertion for behaviour you fix. `tests/model.test.js`,
+  `tests/overview-layout.test.js`, `tests/window-layout.test.js`, and
   `tests/animation-stacking.test.js` are the cheap place to do it;
-  `tests/driver.js` is for behaviour that only exists inside a live shell.
+  `tests/driver.js` is for behaviour that only exists inside a live shell
+  (shortcuts, window activation, the lock screen, the overview).
+- New files under `src/` must be added to `RUNTIME_FILES` in `scripts/build.py`;
+  `make test` fails if one is missing.
 - Never install `tests/driver.js` into a real desktop profile, and do not add it
   to `RUNTIME_FILES` in `scripts/build.py`.
 - Bump `version` in `src/metadata.json` and add a `CHANGELOG.md` entry for changes
@@ -42,4 +46,5 @@ GNOME 42 session.
 
 Install with `make install`, then reload GNOME (X11: **Alt+F2**, `r`, Enter).
 A broken extension can make the shell unusable on Wayland, so prefer testing
-through `make integration` first.
+through `make integration` first. Pass a short `--home` to it (the default is
+fine): the Wayland socket path inside must fit in 107 bytes.

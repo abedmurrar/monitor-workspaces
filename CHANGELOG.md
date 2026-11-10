@@ -4,10 +4,13 @@
 
 Fixes:
 
-- Locking the screen no longer collects every hidden window on secondary monitors
-  onto the visible workspace. The extension now stays enabled on the lock screen;
-  disabling it there restored "Workspaces on primary display only", and unlocking
-  re-applied the extension's setting, which makes mutter gather those windows.
+- Locking and unlocking the screen no longer pulls hidden windows onto the
+  visible workspace or resets each monitor's workspace numbers. GNOME switched the
+  extension off at every lock, which restored "Workspaces on primary display
+  only"; switching it back on at unlock gathered the hidden windows. The extension
+  now stays enabled on the lock screen.
+- In testing, opening the overview right after an unlock could crash GNOME Shell;
+  with the extension no longer cycling at the lock screen, that sequence is clean.
 - Alt+Tab, notifications, and other window activations reveal the window's
   workspace on its own monitor without GNOME's all-monitor slide.
 - When an app raises itself or a dock click activates a native workspace, the
@@ -15,10 +18,10 @@ Fixes:
   monitor under the pointer), and GNOME's all-monitor slide no longer plays.
 - Super+Home/End and "switch to workspace N" select that monitor-local number;
   before, they did nothing or picked the wrong workspace.
-- "Move window to workspace" shortcuts carry the window on its own monitor
-  instead of switching every monitor.
-- Super+scroll on the desktop steps the pointer's monitor and wraps; before, it
-  slid every monitor or stopped at an arbitrary end.
+- "Move window to workspace" shortcuts carry the window to the next workspace of
+  its own monitor and switch that monitor with it; before, the monitor stayed put.
+- Super+scroll on the desktop steps the monitor under the pointer and wraps at
+  the ends; before, it did nothing.
 - Closed windows disappear from the cards immediately.
 - Each monitor's workspace numbering survives Shell restarts and monitors waking
   from sleep or being re-enumerated.

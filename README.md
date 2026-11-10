@@ -15,7 +15,9 @@ selected workspace per monitor, so a switch only touches the monitor you asked f
 
 - GNOME Shell 42 (developed and tested on Ubuntu 22.04 with GNOME 42.9, X11)
 - Fixed workspaces on all displays. The extension sets both options while it is
-  enabled and keeps your existing workspace count.
+  enabled, keeps your existing workspace count, and restores your settings when
+  it is turned off. It stays enabled on the lock screen so locking never disturbs
+  your windows.
 
 ## Install
 
@@ -108,7 +110,7 @@ visible workspace at unlock.
 
 ```sh
 make help          # list targets
-make test          # syntax, model, animation-stacking, and packaging checks
+make test          # syntax, model, layout, animation-stacking, and packaging checks
 make build         # deterministic archive in dist/
 make integration   # isolated headless GNOME session (needs GNOME 42)
 make install       # build and install into the current user profile

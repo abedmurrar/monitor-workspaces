@@ -7,7 +7,7 @@ ARCHIVE := dist/$(UUID).shell-extension.zip
 
 help:
 	@echo 'make build        Create an installable extension in dist/'
-	@echo 'make test         Run syntax, model, stacking, and package checks'
+	@echo 'make test         Run syntax, model, layout, stacking, and package checks'
 	@echo 'make integration  Test in an isolated GNOME 42 desktop (requires GNOME)'
 	@echo 'make install      Build and install into the current user profile'
 
