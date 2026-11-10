@@ -47,6 +47,10 @@ Wayland, log out and back in.
   card to close the overview. Click a window preview to select its workspace, exit
   the overview, and focus the window.
 - Scrolling over a monitor's cards switches that monitor.
+- Drag an open window's preview onto another workspace card to move it. Cards on
+  other monitors work too; the destination highlights while hovering. Neither
+  monitor switches workspaces. Press **Escape** to cancel. Dropping a pinned
+  window onto a specific workspace removes its "Always on Visible Workspace" state.
 - Search and the app grid keep GNOME's normal interfaces.
 - Cards leave room for the search field and launcher using their actual on-screen
   positions. Typing a search or opening the app grid hides the cards immediately.
@@ -109,9 +113,9 @@ real profile.
 ## Known limitations
 
 - GNOME 42 only. It has not been ported to the newer extension API.
-- Cards do not support dragging windows between them yet. The window menu can
-  still move a window to a native workspace, whose numbering may differ from the
-  monitor-local numbers.
+- Dragging supports open window previews. Dragging launcher icons to create new
+  windows on a particular workspace is not implemented. The native window menu
+  uses underlying workspace numbers, which may differ from monitor-local numbers.
 - Native workspace indicators show the underlying global workspace index. Use the
   cards' **Active** markers for each monitor's real selection.
 - Monitor-local numbering rebases when the extension or Shell restarts, or when

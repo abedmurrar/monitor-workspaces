@@ -22,6 +22,12 @@ for (let origin = 0; origin < 3; origin++) {
     windows.push({id: 'sticky', monitor: 1, workspace: origin, sticky: true});
     windows.push({id: 'dialog', monitor: 1, workspace: origin, attached: true});
     const before = logicalSnapshot(model, windows);
+    for (let cursor = 0; cursor < 3; cursor++) {
+        const targetModel = new MonitorModel(3, origin, [cursor]);
+        for (let logical = 0; logical < 3; logical++)
+            assert.equal(targetModel.logical(0, targetModel.storage(0, logical)), logical,
+                'Drop destinations map to the target monitor workspace independently of its cursor');
+    }
     for (const [monitor, target] of [[1, 2], [0, 1], [2, 0], [1, 0], [0, 2], [2, 2]]) {
         const inactive = windows.filter(w => w.monitor !== monitor).map(w => [w.id, w.workspace]);
         apply(windows, model.select(monitor, target, windows));

@@ -178,6 +178,76 @@ async function test() {
     ext.disable();
     assert(ext._animation.active.size === 0, 'Disabling mid-animation removes overlays');
     ext.enable();
+    Main.overview.show();
+    await delay(600);
+    ext._select(0, 1);
+    ext._select(1, 2);
+    ext._moveWindow(leftA, 0, 0);
+    await delay(500);
+    const cursors = [ext._model.current(0), ext._model.current(1)];
+    const unchanged = [leftB, rightA, rightB].map(w => [w.get_monitor(), w.get_workspace().index()]);
+    const findActor = (actor, predicate) => {
+        if (predicate(actor)) return actor;
+        for (const child of actor.get_children()) {
+            const match = findActor(child, predicate);
+            if (match) return match;
+        }
+        return null;
+    };
+    const dragWindow = async (window, monitor, workspace, cancel = false) => {
+        const source = findActor(ext._layer, a => a._delegate?.metaWindow === window);
+        const target = findActor(ext._layer, a => a._workspaceDropTarget?.monitor === monitor &&
+            a._workspaceDropTarget.workspace === workspace);
+        assert(!!source && !!target, 'Drag source preview and destination card exist');
+        const [sx, sy] = source.get_transformed_position();
+        const [sw, sh] = source.get_transformed_size();
+        const [tx, ty] = target.get_transformed_position();
+        const [tw] = target.get_transformed_size();
+        const startX = sx + sw / 2, startY = sy + sh / 2;
+        pointer.notify_absolute_motion(GLib.get_monotonic_time(), startX, startY);
+        await delay(80);
+        pointer.notify_button(GLib.get_monotonic_time(), 1, Clutter.ButtonState.PRESSED);
+        await delay(80);
+        pointer.notify_absolute_motion(GLib.get_monotonic_time(), startX + 45, startY + 10);
+        await delay(100);
+        assert(ext._dragging, 'Real pointer movement starts GNOME drag-and-drop');
+        const layer = ext._layer;
+        ext._queueRender();
+        await delay(50);
+        assert(ext._layer === layer, 'Preview tree remains stable during a drag');
+        for (let step = 1; step <= 8; step++) {
+            pointer.notify_absolute_motion(GLib.get_monotonic_time(),
+                startX + (tx + tw / 2 - startX) * step / 8,
+                startY + (ty + 18 - startY) * step / 8);
+            await delay(30);
+        }
+        await delay(80);
+        assert(ext._dropHighlight?.monitor === monitor && ext._dropHighlight.workspace === workspace,
+            'Destination workspace is highlighted during hover');
+        if (cancel) {
+            keyboard.notify_keyval(GLib.get_monotonic_time(), Clutter.KEY_Escape, Clutter.KeyState.PRESSED);
+            keyboard.notify_keyval(GLib.get_monotonic_time(), Clutter.KEY_Escape, Clutter.KeyState.RELEASED);
+            await delay(300);
+        }
+        pointer.notify_button(GLib.get_monotonic_time(), 1, Clutter.ButtonState.RELEASED);
+        await delay(500);
+        assert(!ext._dragging && !ext._dragMonitor && !ext._dropHighlight, 'Drag state and highlight clean up');
+        assert(Main.overview.visible, 'Dropping a window keeps overview open');
+    };
+    await dragWindow(leftA, 0, 2);
+    assert(leftA.get_monitor() === 0 && ext._model.logical(0, leftA.get_workspace().index()) === 2,
+        'Real drop moves a window between workspaces on the same monitor');
+    await dragWindow(leftA, 1, 0);
+    assert(leftA.get_monitor() === 1 && ext._model.logical(1, leftA.get_workspace().index()) === 0,
+        'Cross-monitor drop uses the destination monitor logical workspace');
+    await dragWindow(leftA, 0, 1, true);
+    assert(leftA.get_monitor() === 1 && ext._model.logical(1, leftA.get_workspace().index()) === 0,
+        'Escape cancels a drag without moving the window');
+    assert(JSON.stringify(cursors) === JSON.stringify([ext._model.current(0), ext._model.current(1)]),
+        'Drops do not change either monitor selected workspace');
+    assert(JSON.stringify(unchanged) === JSON.stringify([leftB, rightA, rightB].map(w => [w.get_monitor(), w.get_workspace().index()])),
+        'Dragging one window does not move other windows');
+    Main.overview.hide();
     log('[monitor-test] ALL TESTS PASSED');
 }
 function init() { return {enable() {test().catch(e => logError(e, '[monitor-test] FAILED'));}, disable() {if(fixtures) fixtures.force_exit();}}; }

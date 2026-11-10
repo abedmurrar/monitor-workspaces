@@ -3,6 +3,6 @@
   "name": "Monitor Workspaces",
   "description": "Independent monitor workspace cards in the Super overview, with per-monitor switching.",
   "shell-version": ["42"],
-  "version": 5,
+  "version": 7,
   "settings-schema": "org.gnome.shell.extensions.monitor-workspaces"
 }

@@ -3,6 +3,8 @@
 .monitor-workspaces-card { background-color: #252930; border: 2px solid #626873; border-radius: 14px; }
 .monitor-workspaces-card:hover { background-color: #303640; border-color: #c4c9d2; }
 .monitor-workspaces-card.active { border: 3px solid #e98442; background-color: #33302e; }
+.monitor-workspaces-card:drop-target { border: 3px solid #ffb375; background-color: #574333; }
 .monitor-workspaces-title { color: white; font-size: 14px; font-weight: bold; }
 .monitor-workspaces-window { background-color: #434a55; border: 1px solid #8c939f; border-radius: 5px; }
 .monitor-workspaces-window:hover { border: 2px solid #e98442; }
+.monitor-workspaces-tooltip { background-color: rgba(20, 22, 27, 0.97); color: #fff; border: 1px solid #737985; border-radius: 8px; padding: 8px 12px; font-size: 13px; }

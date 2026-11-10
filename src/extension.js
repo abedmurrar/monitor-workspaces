@@ -1,10 +1,12 @@
-const {Clutter, Gio, GLib, Meta, Shell, St} = imports.gi;
+const {Clutter, Gio, GLib, Meta, Pango, Shell, St} = imports.gi;
 const Main = imports.ui.main;
+const DND = imports.ui.dnd;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const {MonitorModel, wrap} = Me.imports.model;
 const {MonitorAnimation} = Me.imports.animation;
 const {panelBounds} = Me.imports.overviewLayout;
+const {windowSlots} = Me.imports.windowLayout;
 
 class MonitorWorkspaces {
     enable() {
@@ -15,6 +17,12 @@ class MonitorWorkspaces {
         this._layer = null;
         this._suppressed = [];
         this._overviewOpen = false;
+        this._dragging = false;
+        this._dragMonitor = null;
+        this._dropHighlight = null;
+        this._tooltip = null;
+        this._tooltipTimer = 0;
+        this._tooltipSource = null;
         this._settings = ExtensionUtils.getSettings();
         this._mutter = new Gio.Settings({schema_id: 'org.gnome.mutter'});
         this._wmPrefs = new Gio.Settings({schema_id: 'org.gnome.desktop.wm.preferences'});
@@ -179,11 +187,11 @@ class MonitorWorkspaces {
     }
 
     _queueRender() {
-        if (!this._overviewOpen || this._idle)
+        if (!this._overviewOpen || this._idle || this._dragging)
             return;
         this._idle = Meta.later_add(Meta.LaterType.BEFORE_REDRAW, () => {
             this._idle = 0;
-            if (this._showCards())
+            if (this._showCards() && !this._dragging)
                 this._render();
             return GLib.SOURCE_REMOVE;
         });
@@ -206,6 +214,8 @@ class MonitorWorkspaces {
     }
 
     _clearOverview() {
+        this._hideTooltip();
+        this._finishDrag();
         if (this._layer) {
             this._layer.destroy();
             this._layer = null;
@@ -270,10 +280,12 @@ class MonitorWorkspaces {
         this._layer.add_child(panel);
         panel.add_child(new St.Label({text: `Monitor ${monitor.index + 1}  ·  Workspace ${this._model.current(monitor.index) + 1}`,
             style_class: 'monitor-workspaces-heading'}));
-        panel.add_child(new St.Label({text: 'Choose a workspace · Click a window to open it', y: 30,
+        panel.add_child(new St.Label({text: 'Click to open · Drag windows between workspaces or monitors', y: 30,
             style_class: 'monitor-workspaces-hint'}));
         let lastScroll = 0;
         panel.connect('scroll-event', (_actor, event) => {
+            if (this._dragging)
+                return Clutter.EVENT_STOP;
             if (event.get_time() - lastScroll < 180)
                 return Clutter.EVENT_STOP;
             const direction = event.get_scroll_direction();
@@ -300,6 +312,13 @@ class MonitorWorkspaces {
             const button = new St.Button({style_class: `monitor-workspaces-card${active ? ' active' : ''}`,
                 width, height, can_focus: true, accessible_name: `Monitor ${monitor.index + 1}, workspace ${workspace + 1}`});
             card.add_child(button);
+            card._workspaceDropTarget = {monitor: monitor.index, workspace, button};
+            card._delegate = {
+                handleDragOver: source => this._validDrag(source)
+                    ? DND.DragMotionResult.MOVE_DROP : DND.DragMotionResult.CONTINUE,
+                acceptDrop: source => this._validDrag(source) &&
+                    this._moveWindow(source.metaWindow, monitor.index, workspace),
+            };
             button.connect('clicked', () => {
                 if (this._model.current(monitor.index) === workspace)
                     Main.overview.hide();
@@ -315,34 +334,168 @@ class MonitorWorkspaces {
                 !w.id.skip_taskbar && (w.sticky || this._model.logical(monitor.index, w.workspace) === workspace));
             if (!visible.length)
                 content.add_child(new St.Label({text: 'Empty workspace', x: 8, y: 12, style_class: 'monitor-workspaces-hint'}));
-            for (const entry of visible)
-                this._renderWindow(content, entry.id, monitor, workspace);
+            const slots = windowSlots(visible.map(entry => entry.id.get_frame_rect()),
+                content.width, content.height, 12 * scale);
+            visible.forEach((entry, index) =>
+                this._renderWindow(content, entry.id, monitor, workspace, slots[index]));
         }
     }
 
-    _renderWindow(content, window, monitor, workspace) {
-        const rect = window.get_frame_rect();
-        const scale = Math.min(content.width / monitor.width, content.height / monitor.height);
-        const x = Math.max(0, (rect.x - monitor.x) * scale);
-        const y = Math.max(0, (rect.y - monitor.y) * scale);
-        const width = Math.max(24, Math.min(content.width - x, rect.width * scale));
-        const height = Math.max(20, Math.min(content.height - y, rect.height * scale));
+    _renderWindow(content, window, monitor, workspace, slot) {
+        const {x, y, width, height} = slot;
         const button = new St.Button({x, y, width, height, can_focus: true,
-            style_class: 'monitor-workspaces-window', accessible_name: window.get_title() || 'Window'});
+            style_class: 'monitor-workspaces-window', accessible_name: this._windowTitle(window),
+            track_hover: true});
+        button.connect('notify::hover', () => {
+            if (button.hover)
+                this._queueTooltip(button, window, monitor);
+            else if (this._tooltipSource === button)
+                this._hideTooltip();
+        });
+        button.connect('destroy', () => {
+            if (this._tooltipSource === button)
+                this._hideTooltip();
+        });
         content.add_child(button);
         const actor = window.get_compositor_private();
         if (actor) {
             const clone = new Clutter.Clone({source: actor, reactive: false});
             button.set_child(clone);
         }
+        button._delegate = {
+            owner: this,
+            metaWindow: window,
+            getDragActor: () => new Clutter.Clone({source: button, width, height}),
+            getDragActorSource: () => button,
+        };
+        const draggable = DND.makeDraggable(button, {dragActorMaxSize: 240, dragActorOpacity: 220});
+        draggable.connect('drag-begin', () => this._beginDrag());
+        draggable.connect('drag-cancelled', () => this._highlightDrop(null));
+        draggable.connect('drag-end', () => {
+            this._finishDrag();
+            this._queueRender();
+        });
         button.connect('clicked', () => {
-            if (!window.get_workspace())
+            if (this._dragging || !window.get_workspace())
                 return;
             this._select(monitor.index, workspace);
             Main.overview.hide();
             window.unminimize();
             window.activate(global.get_current_time());
         });
+    }
+
+    _validDrag(source) {
+        return source && source.owner === this && source.metaWindow &&
+            source.metaWindow.get_workspace() && !source.metaWindow.is_attached_dialog();
+    }
+
+    _windowTitle(window) {
+        const app = Shell.WindowTracker.get_default().get_window_app(window);
+        const name = app ? app.get_name() : window.get_wm_class();
+        const title = window.get_title();
+        return name && title && name !== title ? `${name} — ${title}` : title || name || 'Window';
+    }
+
+    _hideTooltip() {
+        if (this._tooltipTimer)
+            GLib.source_remove(this._tooltipTimer);
+        this._tooltipTimer = 0;
+        this._tooltipSource = null;
+        if (this._tooltip)
+            this._tooltip.destroy();
+        this._tooltip = null;
+    }
+
+    _queueTooltip(button, window, monitor) {
+        this._hideTooltip();
+        if (this._dragging || !this._showCards())
+            return;
+        this._tooltipSource = button;
+        this._tooltipTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 350, () => {
+            this._tooltipTimer = 0;
+            if (!button.mapped || !button.hover || this._dragging || !window.get_workspace()) {
+                this._tooltipSource = null;
+                return GLib.SOURCE_REMOVE;
+            }
+            const label = new St.Label({text: this._windowTitle(window),
+                style_class: 'monitor-workspaces-tooltip', reactive: false});
+            label.clutter_text.line_wrap = true;
+            label.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
+            label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            Main.uiGroup.add_child(label);
+            this._tooltip = label;
+            const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+            const margin = 12 * scale;
+            const [, naturalWidth] = label.get_preferred_width(-1);
+            label.width = Math.min(naturalWidth, 440 * scale, monitor.width - 2 * margin);
+            const [, naturalHeight] = label.get_preferred_height(label.width);
+            label.height = Math.min(naturalHeight, monitor.height - 2 * margin);
+            const [x, y] = button.get_transformed_position();
+            const [width, height] = button.get_transformed_size();
+            const top = y - label.height - margin;
+            label.set_position(
+                Math.max(monitor.x + margin, Math.min(x + (width - label.width) / 2,
+                    monitor.x + monitor.width - label.width - margin)),
+                Math.max(monitor.y + margin, Math.min(top >= monitor.y + margin ? top : y + height + margin,
+                    monitor.y + monitor.height - label.height - margin)));
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _highlightDrop(target) {
+        if (this._dropHighlight === target)
+            return;
+        if (this._dropHighlight)
+            this._dropHighlight.button.remove_style_pseudo_class('drop-target');
+        this._dropHighlight = target;
+        if (target)
+            target.button.add_style_pseudo_class('drop-target');
+    }
+
+    _beginDrag() {
+        this._hideTooltip();
+        this._dragging = true;
+        this._dragMonitor = {
+            dragMotion: event => {
+                let actor = event.targetActor;
+                while (actor && !actor._workspaceDropTarget)
+                    actor = actor.get_parent();
+                this._highlightDrop(actor && this._validDrag(event.source) ? actor._workspaceDropTarget : null);
+                return DND.DragMotionResult.CONTINUE;
+            },
+        };
+        DND.addDragMonitor(this._dragMonitor);
+    }
+
+    _finishDrag() {
+        this._highlightDrop(null);
+        if (this._dragMonitor)
+            DND.removeDragMonitor(this._dragMonitor);
+        this._dragMonitor = null;
+        this._dragging = false;
+    }
+
+    _moveWindow(window, monitor, workspace) {
+        if (!window.get_workspace() || !Main.layoutManager.monitors[monitor] ||
+            workspace < 0 || workspace >= this._model.count)
+            return false;
+        const destination = global.workspace_manager.get_workspace_by_index(
+            this._model.storage(monitor, workspace));
+        this._mutating = true;
+        try {
+            // A drop onto a particular workspace makes a pinned window local to it.
+            if (window.is_on_all_workspaces())
+                window.unstick();
+            if (window.get_monitor() !== monitor)
+                window.move_to_monitor(monitor);
+            window.change_workspace(destination);
+        } finally {
+            this._mutating = false;
+        }
+        // Rebuild only after DND releases its source actor and pointer grab.
+        this._queueRender();
+        return true;
     }
 
     disable() {

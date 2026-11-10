@@ -16,6 +16,10 @@ var MonitorModel = class MonitorModel {
         return wrap(physical - this.physical + this.current(monitor), this.count);
     }
 
+    storage(monitor, logical) {
+        return wrap(logical - this.current(monitor) + this.physical, this.count);
+    }
+
     select(monitor, target, windows) {
         target = wrap(target, this.count);
         const delta = this.current(monitor) - target;

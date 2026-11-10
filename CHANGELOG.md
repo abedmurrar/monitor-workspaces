@@ -1,5 +1,12 @@
 # Changelog
 
+## 6
+
+- Drag window previews between workspace cards, including across monitors with
+  different active workspace selections, without switching either monitor.
+- Highlight drop targets and support Escape cancellation with GNOME's drag handler.
+- Keep preview actors stable during dragging and refresh after the drop completes.
+
 ## 5
 
 - Keep GNOME's native workspace previews hidden during search and the app grid,
