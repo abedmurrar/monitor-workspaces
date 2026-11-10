@@ -27,8 +27,9 @@ GNOME 42 session.
 ## Conventions
 
 - 4-space indentation, LF endings; `.editorconfig` covers the details.
-- Keep the workspace mapping logic in `src/model.js` free of GNOME imports so it
-  stays testable under plain Node.
+- Keep the workspace mapping logic in `src/model.js` and the layout maths in
+  `src/overviewLayout.js` and `src/windowLayout.js` free of GNOME imports so they
+  stay testable under plain Node.
 - Add a regression assertion for behaviour you fix. `tests/model.test.js` and
   `tests/animation-stacking.test.js` are the cheap place to do it;
   `tests/driver.js` is for behaviour that only exists inside a live shell.

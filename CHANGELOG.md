@@ -1,5 +1,41 @@
 # Changelog
 
+## 7
+
+Fixes:
+
+- Locking the screen no longer collects every hidden window on secondary monitors
+  onto the visible workspace. The extension now stays enabled on the lock screen;
+  disabling it there restored "Workspaces on primary display only", and unlocking
+  re-applied the extension's setting, which makes mutter gather those windows.
+- Alt+Tab, notifications, and other window activations reveal the window's
+  workspace on its own monitor without GNOME's all-monitor slide.
+- When an app raises itself or a dock click activates a native workspace, the
+  switch is applied to the monitor of the window that took focus (before, the
+  monitor under the pointer), and GNOME's all-monitor slide no longer plays.
+- Super+Home/End and "switch to workspace N" select that monitor-local number;
+  before, they did nothing or picked the wrong workspace.
+- "Move window to workspace" shortcuts carry the window on its own monitor
+  instead of switching every monitor.
+- Super+scroll on the desktop steps the pointer's monitor and wraps; before, it
+  slid every monitor or stopped at an arbitrary end.
+- Closed windows disappear from the cards immediately.
+- Each monitor's workspace numbering survives Shell restarts and monitors waking
+  from sleep or being re-enumerated.
+- The overview builds the cards once while opening (it was twice), and later
+  layout changes only rebuild them when the card areas actually move.
+- Card and label offsets follow the display scale.
+
+New look:
+
+- Cards show the monitor's wallpaper with rounded corners and live window
+  thumbnails with app icons, sized by a grid that makes them as large as the
+  monitor allows (portrait monitors get portrait cards).
+- Close button on window thumbnails, and full window titles on hover.
+- Cards fade out with the overview instead of vanishing.
+- A small per-monitor indicator shows the workspace after keyboard and scroll
+  switches.
+
 ## 6
 
 - Drag window previews between workspace cards, including across monitors with

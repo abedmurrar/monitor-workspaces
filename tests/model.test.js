@@ -44,3 +44,29 @@ for (let origin = 0; origin < 3; origin++) {
     assert.deepEqual([model.current(0), model.current(2)], inactiveCursors);
 }
 console.log('PASS: scoped switching, arbitrary jumps, wraparound, sticky windows, attached dialogs, native fallback (3 monitors × 3 physical origins)');
+
+// Selections persist by monitor geometry across rebuilds (Shell restart,
+// monitors waking up and being re-enumerated in a different order).
+{
+    const {restoreModel, saveState} = context;
+    const left = {index: 0, x: 0, y: 571, width: 2560, height: 1440};
+    const middle = {index: 1, x: 2560, y: 571, width: 2560, height: 1440};
+    const portrait = {index: 2, x: 5120, y: 0, width: 1440, height: 2560};
+    const model = new MonitorModel(3, 1);
+    model.select(0, 2, []);
+    model.select(2, 0, []);
+    const saved = saveState(model, [left, middle, portrait], '');
+    const reordered = [{...portrait, index: 0}, {...left, index: 1}, {...middle, index: 2}];
+    const restored = restoreModel(3, 1, reordered, saved);
+    assert.deepEqual([restored.current(0), restored.current(1), restored.current(2)], [0, 2, 1],
+        'Re-enumerated monitors keep their own selection');
+    // A monitor that disappears and comes back keeps its selection.
+    const withoutPortrait = saveState(restoreModel(3, 1, [left, middle], saved), [left, middle], saved);
+    assert.equal(restoreModel(3, 1, [left, middle, portrait], withoutPortrait).current(2), 0,
+        'A monitor that was briefly disconnected keeps its selection');
+    for (const [count, physical, text] of [[4, 1, saved], [3, 0, saved], [3, 1, '{oops'], [3, 1, ''], [3, 1, '"x"']]) {
+        const fresh = restoreModel(count, physical, [left, middle, portrait], text);
+        assert.equal(fresh.cursors.length, 0, `Stale or invalid state (${count}, ${physical}) starts fresh`);
+    }
+    console.log('PASS: per-monitor selection survives restarts, re-enumeration, and a monitor disconnecting; stale state is ignored');
+}

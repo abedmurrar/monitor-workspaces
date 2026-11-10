@@ -10,7 +10,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = (
-    "animation.js", "extension.js", "metadata.json", "model.js", "overviewLayout.js", "windowLayout.js", "stylesheet.css",
+    "animation.js", "extension.js", "indicator.js", "metadata.json", "model.js", "overview.js",
+    "overviewLayout.js", "stylesheet.css", "windowLayout.js",
     "schemas/org.gnome.shell.extensions.monitor-workspaces.gschema.xml",
 )
 

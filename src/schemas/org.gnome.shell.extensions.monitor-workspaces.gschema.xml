@@ -2,5 +2,10 @@
   <schema id="org.gnome.shell.extensions.monitor-workspaces" path="/org/gnome/shell/extensions/monitor-workspaces/">
     <key name="next" type="as"><default>['&lt;Control&gt;&lt;Alt&gt;a']</default></key>
     <key name="previous" type="as"><default>['&lt;Control&gt;&lt;Alt&gt;q']</default></key>
+    <key name="state" type="s">
+      <default>''</default>
+      <summary>Remembered workspace selection per monitor</summary>
+      <description>Written by the extension so numbering survives Shell restarts and monitors waking up. Not a preference.</description>
+    </key>
   </schema>
 </schemalist>

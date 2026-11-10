@@ -1,8 +1,9 @@
 {
   "uuid": "monitor-workspaces@local",
   "name": "Monitor Workspaces",
-  "description": "Independent monitor workspace cards in the Super overview, with per-monitor switching.",
+  "description": "Independent workspaces on every monitor: per-monitor switching, overview cards, and window drag-and-drop.",
   "shell-version": ["42"],
+  "session-modes": ["user", "unlock-dialog"],
   "version": 7,
   "settings-schema": "org.gnome.shell.extensions.monitor-workspaces"
 }

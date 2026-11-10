@@ -18,7 +18,12 @@ unset WAYLAND_DISPLAY
 unset DISPLAY
 gsettings set org.gnome.shell enabled-extensions "['monitor-workspaces@local', 'monitor-workspaces-test@local']"
 gsettings set org.gnome.mutter dynamic-workspaces false
+# Mirrors a real setup: the extension turns this off and must restore it.
+gsettings set org.gnome.mutter workspaces-only-on-primary true
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 3
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "['<Control><Alt>Left']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "['<Control><Alt>Right']"
-exec gnome-shell --headless --wayland --no-x11 --virtual-monitor 1280x800 --virtual-monitor 1280x800 --wayland-display monitor-test
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-1 "['<Super>Home']"
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-last "['<Super>End']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Shift><Control><Alt>Right']"
+exec gnome-shell --headless --wayland --no-x11 --virtual-monitor 1280x800 --virtual-monitor 1280x800 --virtual-monitor 800x1280 --wayland-display monitor-test

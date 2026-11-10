@@ -26,6 +26,11 @@ class BuildTests(unittest.TestCase):
                 self.assertGreater(len(archive.read("schemas/gschemas.compiled")), 0)
                 self.assertIsNone(archive.testzip())
 
+    def test_every_source_module_ships(self):
+        modules = {path.name for path in (ROOT / "src").glob("*.js")}
+        self.assertEqual(modules - set(builder.RUNTIME_FILES), set(),
+                         "A module missing from RUNTIME_FILES only fails inside GNOME Shell")
+
 
 if __name__ == "__main__":
     unittest.main()

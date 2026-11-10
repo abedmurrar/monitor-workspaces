@@ -1,10 +1,57 @@
-.monitor-workspaces-heading { color: white; font-weight: bold; font-size: 18px; }
-.monitor-workspaces-hint { color: #c2c5ca; font-size: 12px; }
-.monitor-workspaces-card { background-color: #252930; border: 2px solid #626873; border-radius: 14px; }
-.monitor-workspaces-card:hover { background-color: #303640; border-color: #c4c9d2; }
-.monitor-workspaces-card.active { border: 3px solid #e98442; background-color: #33302e; }
-.monitor-workspaces-card:drop-target { border: 3px solid #ffb375; background-color: #574333; }
-.monitor-workspaces-title { color: white; font-size: 14px; font-weight: bold; }
-.monitor-workspaces-window { background-color: #434a55; border: 1px solid #8c939f; border-radius: 5px; }
-.monitor-workspaces-window:hover { border: 2px solid #e98442; }
-.monitor-workspaces-tooltip { background-color: rgba(20, 22, 27, 0.97); color: #fff; border: 1px solid #737985; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+/* Cards: border + padding (3px + 3px) must equal CARD_RING in overview.js. */
+.monitor-workspaces-card {
+    border: 3px solid transparent;
+    padding: 3px;
+    border-radius: 15px;
+    transition-duration: 150ms;
+}
+.monitor-workspaces-card:hover { border-color: rgba(255, 255, 255, 0.35); }
+.monitor-workspaces-card:focus { border-color: rgba(255, 255, 255, 0.6); }
+.monitor-workspaces-card.active { border-color: #e95420; }
+.monitor-workspaces-card:drop-target {
+    border-color: #ffb38a;
+    background-color: rgba(233, 84, 32, 0.35);
+}
+
+.monitor-workspaces-label {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    padding-top: 8px;
+}
+.monitor-workspaces-label.active { color: #ffffff; }
+
+.monitor-workspaces-window {
+    border: 2px solid transparent;
+    border-radius: 6px;
+    transition-duration: 120ms;
+}
+.monitor-workspaces-window:hover,
+.monitor-workspaces-window:focus { border-color: rgba(255, 255, 255, 0.85); }
+
+.monitor-workspaces-tooltip {
+    background-color: rgba(20, 22, 27, 0.97);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.monitor-workspaces-indicator {
+    background-color: rgba(24, 24, 27, 0.88);
+    border-radius: 999px;
+    padding: 12px 16px;
+    spacing: 8px;
+}
+.monitor-workspaces-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+.monitor-workspaces-dot.active {
+    width: 24px;
+    background-color: #ffffff;
+}

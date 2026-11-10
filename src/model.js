@@ -41,3 +41,42 @@ var MonitorModel = class MonitorModel {
         return moves;
     }
 };
+
+/* Monitor indices change when screens reconnect or wake from sleep, so each
+ * monitor's selection is remembered by its geometry instead. */
+var monitorKey = monitor => `${monitor.x},${monitor.y},${monitor.width},${monitor.height}`;
+
+var parseState = text => {
+    try {
+        const state = JSON.parse(text || 'null');
+        return state && typeof state === 'object' && state.cursors && typeof state.cursors === 'object'
+            ? state : null;
+    } catch (_error) {
+        return null;
+    }
+};
+
+// Monitors that are absent right now keep their remembered selection.
+var saveState = (model, monitors, previous) => {
+    const old = parseState(previous);
+    const cursors = old && old.count === model.count && old.physical === model.physical
+        ? {...old.cursors} : {};
+    for (const monitor of monitors)
+        cursors[monitorKey(monitor)] = model.current(monitor.index);
+    return JSON.stringify({count: model.count, physical: model.physical, cursors});
+};
+
+// Saved selections only apply while the native workspaces still line up
+// with them; otherwise numbering starts fresh. Windows never move either way.
+var restoreModel = (count, physical, monitors, saved) => {
+    const model = new MonitorModel(count, physical);
+    const state = parseState(saved);
+    if (!state || state.count !== count || state.physical !== physical)
+        return model;
+    for (const monitor of monitors) {
+        const cursor = state.cursors[monitorKey(monitor)];
+        if (Number.isInteger(cursor))
+            model.cursors[monitor.index] = wrap(cursor, count);
+    }
+    return model;
+};

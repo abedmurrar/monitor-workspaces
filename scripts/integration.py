@@ -16,7 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 UUID = "monitor-workspaces@local"
 DRIVER_UUID = "monitor-workspaces-test@local"
 PASS_MARKER = "[monitor-test] ALL TESTS PASSED"
-FAIL_MARKERS = ("[monitor-test] FAILED", "JS ERROR")
+FAIL_MARKERS = ("[monitor-test] FAILED", "JS ERROR", "GNOME Shell crashed", "libmutter-ERROR")
+# Unix socket paths, including the trailing NUL, must fit in 108 bytes.
+SOCKET_PATH_LIMIT = 107
 
 spec = importlib.util.spec_from_file_location("extension_build", ROOT / "scripts" / "build.py")
 builder = importlib.util.module_from_spec(spec)
@@ -45,6 +47,8 @@ def prepare(home):
         "name": "Monitor Workspaces integration driver",
         "description": "Test-only driver. Never install this into a real desktop profile.",
         "shell-version": metadata["shell-version"],
+        # Survive the lock-screen test; disabling would kill the fixture windows.
+        "session-modes": ["user", "unlock-dialog"],
         "version": 1,
     }, indent=2) + "\n")
     shutil.copy2(ROOT / "tests" / "driver.js", driver / "extension.js")
@@ -70,6 +74,10 @@ def main():
                         help="Throwaway directory for the test session's XDG directories")
     parser.add_argument("--timeout", type=int, default=240, help="Seconds to wait for the driver")
     args = parser.parse_args()
+    args.home = args.home.resolve()
+    socket = args.home / "runtime" / "monitor-test"
+    if len(str(socket).encode()) > SOCKET_PATH_LIMIT:
+        raise SystemExit(f"--home is too long for a Wayland socket path ({socket}); use a shorter directory")
     if shutil.which("gnome-shell") is None:
         raise SystemExit("gnome-shell is not installed; the integration test needs a GNOME 42 desktop")
     output = prepare(args.home)
