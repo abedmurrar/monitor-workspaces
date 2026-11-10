@@ -4,6 +4,6 @@
   "description": "Independent workspaces on every monitor: per-monitor switching, overview cards, and window drag-and-drop.",
   "shell-version": ["42"],
   "session-modes": ["user", "unlock-dialog"],
-  "version": 7,
+  "version": 8,
   "settings-schema": "org.gnome.shell.extensions.monitor-workspaces"
 }

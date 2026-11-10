@@ -48,8 +48,9 @@ Wayland, log out and back in.
   **Super+Home/End** and "switch to workspace *N*" pick that monitor's own
   workspace numbers, whatever the native index behind it.
 - "Move window to workspace" shortcuts (for example **Shift+Ctrl+Alt+Right**)
-  carry the focused window to the next workspace of *its* monitor and switch that
-  monitor along with it.
+  carry a window to the next workspace of the monitor under the pointer and switch
+  that monitor along with it. That is the focused window if it is on that monitor;
+  otherwise the window you used there most recently, which also gets focus.
 - **Super+scroll** on the desktop switches the monitor under the pointer, with
   ordinary and high-resolution wheels.
 - **Alt+Tab**, notifications, and anything else that activates a window on a
@@ -132,7 +133,8 @@ GNOME Shell 42 session (`--headless --wayland`, two 1280×800 monitors and one
 and "Workspaces on primary display only" initially on) with four real GTK windows
 from `tests/fixtures.js`. It asserts card selection, independent window placement,
 real keyboard input for the arrow, numbered, and move-window shortcuts,
-Super+scroll (discrete and smooth), smooth scrolling over cards, Alt+Tab-style and
+Super+scroll (discrete and smooth), the move shortcut on primary and secondary
+monitors with focus on either, smooth scrolling over cards, Alt+Tab-style and
 native window activation, **zero global workspace-switch signals**, lock and
 unlock, monitor re-enumeration, monitor-bounded animation with untouched
 neighbouring monitors mid-slide, repeated and simultaneous transitions, reduced
@@ -162,6 +164,9 @@ real profile.
   screen does not do this.
 - If a monitor disconnects, mutter moves its windows to the remaining monitors;
   they do not move back by themselves.
+- GNOME 42 may log `TypeError: workspace is undefined` from `workspacesView.js`
+  when the overview closes. It is a teardown-order bug in GNOME's own (hidden)
+  workspace views in "workspaces on all displays" mode and has no visible effect.
 - Other extensions that replace the overview or its key handlers, and very large
   workspace counts, need additional integration work.
 

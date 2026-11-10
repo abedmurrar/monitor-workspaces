@@ -273,15 +273,34 @@ class MonitorWorkspaces {
         return delta;
     }
 
+    /* Like every other shortcut, moving acts on the monitor under the pointer:
+     * the focused window if it is there, otherwise the window used most
+     * recently on that monitor (focus does not follow the pointer). */
+    _windowToMove(focused) {
+        const monitor = this._pointerMonitor();
+        const root = window => {
+            while (window && window.is_attached_dialog() && window.get_transient_for())
+                window = window.get_transient_for();
+            return window;
+        };
+        focused = root(focused);
+        if (focused && focused.get_monitor() === monitor)
+            return focused;
+        return global.display.get_tab_list(Meta.TabList.NORMAL, null).map(root).find(window =>
+            window && window.get_monitor() === monitor && !window.minimized && !window.is_on_all_workspaces() &&
+            window.get_workspace() && window.get_workspace().index() === this._model.physical) || null;
+    }
+
     _onWorkspaceBinding(window, binding) {
         const [action, , , target] = binding.get_name().split('-');
         let subject = null;
         if (action === 'move') {
-            subject = window || global.display.focus_window;
-            while (subject && subject.is_attached_dialog() && subject.get_transient_for())
-                subject = subject.get_transient_for();
+            const focused = window || global.display.focus_window;
+            subject = this._windowToMove(focused);
             if (!subject || !subject.get_workspace() || subject.is_on_all_workspaces())
                 return;
+            if (subject !== focused)
+                subject.activate(global.get_current_time());
         }
         const monitor = subject ? subject.get_monitor() : this._pointerMonitor();
         const current = this._model.current(monitor);

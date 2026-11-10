@@ -184,6 +184,35 @@ async function test() {
     await delay(300);
     ext._select(0, 1);
     await delay(300);
+    // The same shortcut on a secondary monitor, with the focused window there.
+    const secondary = Main.layoutManager.monitors[1];
+    await pointAt(secondary.x + 1000, secondary.y + 700);
+    rightB.activate(global.get_current_time());
+    await delay(200);
+    await press([Clutter.KEY_Shift_L, Clutter.KEY_Control_L, Clutter.KEY_Alt_L, Clutter.KEY_Right]);
+    assert(ext._model.current(1) === 2 && rightB.get_workspace().index() === ext._model.physical,
+        'Shift+Ctrl+Alt+Right works for a window on a secondary monitor');
+    assert(ext._model.current(0) === 1, 'Moving a secondary-monitor window leaves the primary monitor alone');
+    ext.moveWindow(rightB, 1, 1);
+    ext._select(1, 1);
+    await delay(300);
+    // Click-to-focus: focus stays on the primary while the pointer is on monitor 2.
+    // The shortcut follows the pointer, like every other one, and takes the
+    // window used most recently there.
+    rightB.activate(global.get_current_time());
+    await delay(100);
+    leftB.activate(global.get_current_time());
+    await delay(200);
+    const leftSnapshot = [leftA, leftB].map(w => w.get_workspace().index()).join();
+    await press([Clutter.KEY_Shift_L, Clutter.KEY_Control_L, Clutter.KEY_Alt_L, Clutter.KEY_Right]);
+    assert(ext._model.current(1) === 2 && rightB.get_workspace().index() === ext._model.physical &&
+        global.display.focus_window === rightB,
+    'With focus on another monitor, the move shortcut takes the pointer monitor\'s last-used window and focuses it');
+    assert(ext._model.current(0) === 1 && [leftA, leftB].map(w => w.get_workspace().index()).join() === leftSnapshot,
+        'The focused window\'s monitor is left alone');
+    ext.moveWindow(rightB, 1, 1);
+    ext._select(1, 1);
+    await delay(300);
 
     // Super+scroll on the desktop, discrete and smooth, at both ends of the native range.
     const second = Main.layoutManager.monitors[1];

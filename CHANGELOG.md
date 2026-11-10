@@ -1,5 +1,13 @@
 # Changelog
 
+## 8
+
+- "Move window to workspace" shortcuts follow the monitor under the pointer, like
+  every other shortcut. With click-to-focus, pointing at another screen leaves
+  keyboard focus behind, so the shortcut used to move the window on the primary
+  monitor instead. It now moves the focused window if it is on the pointer's
+  monitor, and otherwise the window used most recently there, which it focuses.
+
 ## 7
 
 Fixes:
